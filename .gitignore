@@ -85,3 +85,4 @@ nosetests.xml
 Icon?
 ehthumbs.db
 Thumbs.db
+/.settings/
