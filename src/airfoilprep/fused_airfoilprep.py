@@ -100,6 +100,7 @@ class AirfoilPreppyPolarExtrapolator(Component):
         pol = params['cs_polars']
         nmet = 0
         # TODO: blend polars determined with different methods
+        # TODO: blend polars from root to first reasonable airfoil
         for i, tc in enumerate(self.blend_var):
             af_name = af_name_base + \
                 '%03d_%04d' % (i, tc * 1000) + af_name_suffix
