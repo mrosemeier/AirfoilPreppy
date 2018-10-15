@@ -5,13 +5,13 @@ from airfoilprep import Polar, Airfoil
 
 class AirfoilPreppyPolarExtrapolator(Component):
 
-    def __init__(self, config, sdim, nalpha):
+    def __init__(self, config, sdim, nalpha, naero_coeffs):
 
         super(AirfoilPreppyPolarExtrapolator, self).__init__()
 
         # HAWC2 output requires:
-        self.blend_var = config['AirfoilPrep']['blend_var']
-        self.naero_coeffs = len(self.blend_var)
+        #self.blend_var = config['AirfoilPrep']['blend_var']
+        self.naero_coeffs = naero_coeffs
 
         # TODO: predict number of aoa for each airfoil or use same for all afs
         '''
@@ -42,6 +42,8 @@ class AirfoilPreppyPolarExtrapolator(Component):
         self.nalpha = 15
 
         self.plot_polars = False
+        self.af_name_base = 'cs_'
+        self.af_name_suffix = '_aerodyn'
 
         for k, w in config['AirfoilPrep'].iteritems():
             try:
@@ -51,11 +53,11 @@ class AirfoilPreppyPolarExtrapolator(Component):
 
     def _init_params(self):
 
-        self.add_param('cs_polars', np.zeros(  # nsec, alpha, cl ,cd, cm
-            (self.nalpha, 4, self.nsec, self.nre, self.nmet)))
+        self.add_param('cs_polars', np.zeros(  # naero_coeffs, alpha, cl ,cd, cm
+            (self.nalpha, 4, self.naero_coeffs, self.nre, self.nmet)))
         self.add_param(
-            'n_cs_alpha', np.zeros((self.nsec, self.nre, self.nmet)).astype(int))
-        self.add_param('cs_polars_tc', np.zeros((self.nsec)))
+            'n_cs_alpha', np.zeros((self.naero_coeffs, self.nre, self.nmet)).astype(int))
+        self.add_param('cs_polars_tc', np.zeros((self.naero_coeffs)))
 
         self.add_param('AR', 0., desc='aspect ratio = (rotor radius / chord_75% radius)\
             if provided, cdmax is computed from AR')
@@ -92,18 +94,19 @@ class AirfoilPreppyPolarExtrapolator(Component):
         AR = rotor_radius / chord_75
 
         # write aerodyn files
-        af_name_base = 'cs_'
-        af_name_suffix = '_aerodyn'
-        tcs = params['cs_polars_tc']
+        #tcs = params['cs_polars_tc']
 
         n_cs_alpha = params['n_cs_alpha']
         pol = params['cs_polars']
         nmet = 0
         # TODO: blend polars determined with different methods
         # TODO: blend polars from root to first reasonable airfoil
+        self.blend_var = params['cs_polars_tc']
         for i, tc in enumerate(self.blend_var):
-            af_name = af_name_base + \
-                '%03d_%04d' % (i, tc * 1000) + af_name_suffix
+            af_name = self.af_name_base + \
+                '%03d_%04d' % (i, tc * 1000) + self.af_name_suffix
+            af_name_adwimo = 'adwimo_' + self.af_name_base + \
+                '%03d_%04d' % (i, tc * 1000) + self.af_name_suffix
             re_polars = []
             for nre, re in enumerate(self.res):
                 # create polar object
@@ -138,6 +141,7 @@ class AirfoilPreppyPolarExtrapolator(Component):
             af = Airfoil(re_polars)
             af.interpToCommonAlpha()
             af.writeToAerodynFile(af_name + '.dat')
+            af.writeToAerodynFileAdwimo(af_name_adwimo + '.dat')
 
             if self.plot_polars:
                 figs = af.plot(single_figure=True)
